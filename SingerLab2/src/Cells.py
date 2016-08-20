@@ -20,7 +20,7 @@ class Cells(object):
    scale: [z y x]
    
     """    
-    def __init__(self, cellAddress , keywordForCell = None, NCBEboolean = [True, True, True, True]):
+    def __init__(self, cellAddress , keywordForCell = None, NCBEboolean = [True, True, True, True], makeitEmpty = False):
         
         """
         Excpetion check
@@ -32,38 +32,49 @@ class Cells(object):
         if not os.path.isfile(cellAddress):
             raise Exception('The file does not exist.')
         """
+
         if len(NCBEboolean) > 4 :
             raise Exception('Too many parameters for boolean array.')
         
         if len(NCBEboolean) < 4 :
             raise Exception('Too few parameters for boolean array.')
         ####
-        self.NCBEboolean = NCBEboolean
+        self.NCBEboolean = None
+        
         self.Nodes = None
         self.Comments = None
         self.Edges = None
         self.Branches = None
         self.MinMax = None
         
-        self.XMLfile = ET.parse(cellAddress)  
-         
-        self.Names = self.nameExtract()     
-        self.Names = self.__getNameOfCells(keywordForCell)     
+        self.XMLfile = None
+        self.Names = None
+        self.Parameter = None
+        self.scale = None
+        
+        if not makeitEmpty:
+            self.NCBEboolean = NCBEboolean        
+            self.XMLfile = ET.parse(cellAddress)  
+             
+            self.Names = self.nameExtract()     
+            self.Names = self.__getNameOfCells(keywordForCell)     
+                
+            self.Parameter = self.parameterExtract()    
+            self.scale = self.scaleExtract()
             
-        self.Parameter = self.parameterExtract()    
-        self.scale = self.scaleExtract()
-        
-        if NCBEboolean[0]:
-            self.Nodes = self.nodesExtract()
+            if NCBEboolean[0]:
+                self.Nodes = self.nodesExtract()
+                
+            if NCBEboolean[1]:
+                self.Comments = self.commentExtract()
             
-        if NCBEboolean[1]:
-            self.Comments = self.commentExtract()
-        
-        if NCBEboolean[2]:
-            self.Edges = self.edgesExtract()
-        
-        if NCBEboolean[3]:
-            Branch = self.branchExtract() 
+            if NCBEboolean[2]:
+                self.Edges = self.edgesExtract()
+            
+            if NCBEboolean[3]:
+                Branch = self.branchExtract() 
+            
+            
     """
     return xml.parameter
     """
@@ -462,12 +473,60 @@ class Cells(object):
            # returner.setdefault(item)
             #returner[item] = count  
         return returner
-    def toXML(self):
-        print "todo"
+    def toXML(self, filename):
+        CellPrinter(self, filename)
+        print "File created."
+    def toMultiXML(self, saveDir):
+        if not os.path.isdir(saveDir):
+            raise Exception(saveDir + "is not a directory.")
+        
+        
+        Names = self.Names
+        for Name in Names:
+            separtor(self, saveDir + "/" + Name)    
+        
     def toVTK(self):
         print "todo"
-    def toManyCells(self):
-        print "todo"
+        
+    def toManyCells(self, NCBEboolean):
+        cellDict = {}
+        for name in self.Names:
+            cellDict.setdefault(name)
+            temp = Cells(None, None, NCBEboolean, True)
+            
+            if NCBEboolean[0]:
+                nodeDict = {}
+                nodeDict.setdefault(name)
+                nodeDict[name] = self.Nodes[name]
+                temp.Nodes = nodeDict
+            if NCBEboolean[2]:
+                edgeDict = {}
+                edgeDict.setdefault(name)
+                edgeDict[name] = self.Edges[name]
+                temp.Edges = edgeDict
+            
+            if NCBEboolean[1]:
+                commentDict = {}
+                commentDict.setdefault(name)
+                commentDict[name] = self.Comments[name]
+                temp.Comments = commentDict
+            if NCBEboolean[3]:
+                branchDict = {}
+                branchDict.setdefault(name)
+                branchDict[name] = self.Branches[name]
+                temp.Branches = branchDict        
+            
+            temp.NCBEboolean = NCBEboolean
+            
+            nameList = []
+            nameList.append(name)
+            temp.Names = nameList
+            
+            temp.Parameter = self.Parameter
+            temp.scale = self.scale
+            
+            cellDict[name] = temp
+        return cellDict
     def addCells(self):
         print "todo"
     def extractCells(self, cellnames):
@@ -475,10 +534,38 @@ class Cells(object):
 
     def getEllipse(self):
         print "todo"
-    def toPolygon(self, Nodes = True):
+    
+    def toArea(self, Nodes = True, keyword = None):
+        polyDict = self.toPolygon(Nodes, keyword)
+        areaDict = {}
+        for name in polyDict.keys():
+            areaDict.setdefault(name)
+            areaDict[name] = polyDict[name].area
+        return areaDict
+    def toPolygon(self, Nodes = True, keyword = None):
+        NodeDict = {}
+        if Nodes:
+            if self.NCBEboolean[0]:
+                NodeDict = self.Nodes
+            else:
+                raise Exception("The cell does not have Nodes.")
+        else:
+            if self.NCBEboolean[1]:
+                if keyword == None:
+                    NodeDict = self.Comments
+                else:
+                    NodeDict = self.commentWithKeywordExtractDict(keyword)
+            else:
+                raise Exception("The cell does not have Comments.")
+            
+        hullDict = self.toConvexHull(Nodes)
+        polyDict = {}
+        for name in NodeDict.keys():
+            polyDict.setdefault(name)
+            polyDict[name] = Polygon(vertexToPoly(hullDict[name], yzExtract(NodeDict[name])))
         
-        
-    def toConvexHull(self, Nodes = True, printCSV = False, saveLocation = None):
+        return polyDict
+    def toConvexHull(self, Nodes = True, keyword = None, printCSV = False, saveLocation = None):
         if printCSV:
             if saveLocation == None:
                 raise Exception("The file name is not specified.")
@@ -487,30 +574,35 @@ class Cells(object):
             if os.path.exists(saveLocation):
                 raise Exception(saveLocation + " already exists.")
         
+        NodeDict = {}
         if Nodes:
             if self.NCBEboolean[0]:
-                hullDict = {}
-                for name in self.Nodes.keys():
-                    nodeList = self.Nodes[name]
-                    yzList = yzExtract(nodeList)
-                    
-                    hullDict.setdefault(name)
-                    hullDict[name] = ConvexHull(yzList)
-                return hullDict
+                NodeDict = self.Nodes
             else:
                 raise Exception("The cell does not have Nodes.")
         else:
             if self.NCBEboolean[1]:
-                hullDict = {}
-                for name in self.Comments.keys():
-                    commentList = self.Comments[name]
-                    yzList = yzExtract(commentList)
-                    
-                    hullDict.setdefault(name)
-                    hullDict[name] = ConvexHull(yzList)
-                return hullDict
+                if keyword == None:
+                    NodeDict = self.Comments
+                else:
+                    NodeDict = self.commentWithKeywordExtractDict(keyword)
             else:
                 raise Exception("The cell does not have Comments.")
+        
+        hullDict = {}
+        for name in NodeDict.keys():
+            nodeList = self.Nodes[name]
+            
+            if len(nodeList) < 3:
+                raise name + " list have less than 3 nodes; not enough for convex hull. "
+            
+            yzList = yzExtract(nodeList)
+            
+            hullDict.setdefault(name)
+            hullDict[name] = ConvexHull(yzList)
+
+
+        return hullDict
         
         
         
@@ -598,7 +690,9 @@ class Cells(object):
                 avgDict[name] = getAvgPoint(nodeList)  
             else:
                 avgDict[name] = getMedianPoint(nodeList)
+
         return avgDict
+    
         
     def getDeviation(self, StandardDeviation = True, Node = True, keyword = None):
         if not (self.NCBEboolean[0]):

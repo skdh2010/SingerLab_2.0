@@ -6,17 +6,6 @@ Created on Aug 17, 2016
 from ImportList import *
 
 
-def yzExtract(arrNode):
-    aList = []
-    for item in arrNode:
-        newNode = []
-        newNode.append(item[1])
-        newNode.append(item[0])
-        aList.append(newNode)
-    return aList
-
-
-
  
 def cross(a, b):
     comp1 = a[1]*b[2] - a[2]*b[1]
