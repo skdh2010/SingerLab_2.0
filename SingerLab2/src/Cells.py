@@ -326,11 +326,7 @@ class Cells(object):
             EdgeNode[key] = [item for item in indivCellNode if item[3] in indEdSource]
        
         return EdgeNode
-    def __allCommentComnined(self):
-        allComments = []
-        for comments in self.Comments.values():
-            allComments = allComments + comments
-        return allComments
+
     """
     return edges in dictionary form
     { cell: [z y x id cellName]}
@@ -600,7 +596,10 @@ class Cells(object):
             
             hullDict.setdefault(name)
             hullDict[name] = ConvexHull(yzList)
-
+            
+            if printCSV:
+                vertice = vertexToPoly(hullDict[name], yzList)
+                printVertice(saveLocation + "/" + name, vertice)
 
         return hullDict
         
@@ -718,5 +717,68 @@ class Cells(object):
         
         return devDict
 
-                     
+    def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None):
+        def compareNode(nodeA, nodeB):
+            if (math.fabs((nodeA[0] - nodeB[0]) < threshold)) and (math.fabs((nodeA[1] - nodeB[1]) < threshold)) and (math.fabs((nodeA[2] - nodeB[2]) < threshold)):
+                return True
+            else:
+                return False
+        
+        selfNodeDict = {}
+        if useNodeForSelf:
+            if self.NCBEboolean[0]:
+                selfNodeDict = self.allNodes()
+            else:
+                raise Exception("The cell does not have Nodes.")
+        else:
+            if self.NCBEboolean[1]:
+                if keywordForSelf == None:
+                    selfNodeDict = self.Comments()
+                else:
+                    selfNodeDict = self.commentWithKeywordExtractDict(keywordForSelf)
+                    
+        otherNodeList = []      
+        if useNodeForOther:
+            if otherCell.NCBEboolean[0]:
+                otherNodeList = otherCell.allNodesExtract()
+            else:
+                raise Exception("The cell does not have Nodes.")
+        else:
+            if otherCell.NCBEboolean[1]:
+                if keywordForOther == None:
+                    otherNodeList = otherCell.allCommentExtracted()
+                else:
+                    otherNodeList = otherCell.commentWithKeywordExtract(keywordForOther)
+                    
+        for name in selfNodeDict.keys():
+            newNodeDict = {}
+            newNodeDict.setdefault(name)
+            newNodeDict[name] = []
+            
+            nodeList = selfNodeDict[name]
+            for selfNode in nodeList:
+                newNode = copy.copy(selfNode)
+                for otherNode in otherNodeList:
+                    if compareNode(newNode, otherNode):
+                        newNode.append(otherNode[3])
+                        newNode.append(otherNode[4])
+                        newNodeDict[name].append(selfNode)
+                        break
+            
+            
+        newCell = Cells(None, None, [False, True, False, False], True)
+        newCell.NCBEboolean = [False, True, False, False]
+        newCell.Names = newNodeDict.keys()
+        newCell.Parameter = self.Parameter
+        newCell.scale = self.scale
+        newCell.Comments =  newNodeDict
+        
+                
+                
+                    
+                    
+                    
+        
+                    
+                    
     

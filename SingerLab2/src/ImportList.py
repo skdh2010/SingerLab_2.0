@@ -3,7 +3,7 @@ Created on Aug 17, 2016
 
 @author: Nao
 '''
-import math, os, re, csv, sys, pprint
+import math, os, re, csv, sys, pprint, copy
 import lxml.etree as ET
 import numpy as np
 from numpy import pi

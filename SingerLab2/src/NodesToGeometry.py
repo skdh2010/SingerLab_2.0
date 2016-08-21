@@ -29,16 +29,14 @@ def vertexToPoly(hull, points):
         
     return returnList
 
-def printVertex(filename, ):
+def printVertice(filename, vertice):
     with open(filename + ".csv", 'wb') as csvfile:
         fieldnames = ['x','y']
         writer = csv.DictWriter(csvfile, fieldnames =fieldnames)
-        
-        for item5 in DicPolyV.keys():
-            if item5 in VAreaSet:
-                writer.writerow({'connectTo': item5, '# of connection': str(len(CBACsorted1[item3][item5])), 'intersecting area':str((DicPolyC[item3].intersection(DicPolyV[item5])).area)})
-            else:
-                writer.writerow({'connectTo': item5, '# of connection': str(0), 'intersecting area':str((DicPolyC[item3].intersection(DicPolyV[item5])).area)})
+        writer.writerow({'x': 'x', 'y': 'y'})
+        for vertex in vertice:
+            writer.writerow({'x': vertex[0], 'y': vertex[1]})
+
        
         
     
