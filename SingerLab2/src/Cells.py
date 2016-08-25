@@ -215,7 +215,7 @@ class Cells(object):
             int_list = []
             for item in indivCellNode:
                 if item[3] in intersection:
-                    temp = item
+                    temp = copy.copy(item)
                     for commenta in Comments:
                         if commenta[0] == item[3]:
                             temp.append(commenta[1])
@@ -392,7 +392,7 @@ class Cells(object):
     {[z y x id cellName comment]} 
     """
     def commentWithKeywordExtract(self,*args):
-        Comments = self.__allCommentComnined()
+        Comments = self.allCommentExtracted()
         newComments = []
         for comment in Comments:
             for keyword in args:
@@ -555,7 +555,7 @@ class Cells(object):
             else:
                 raise Exception("The cell does not have Comments.")
             
-        hullDict = self.toConvexHull(Nodes)
+        hullDict = self.toConvexHull(Nodes, keyword)
         polyDict = {}
         for name in NodeDict.keys():
             polyDict.setdefault(name)
@@ -588,7 +588,7 @@ class Cells(object):
         
         hullDict = {}
         for name in NodeDict.keys():
-            nodeList = self.Nodes[name]
+            nodeList = NodeDict[name]
             
             if len(nodeList) < 3:
                 raise name + " list have less than 3 nodes; not enough for convex hull. "
@@ -600,7 +600,10 @@ class Cells(object):
             
             if printCSV:
                 vertice = vertexToPoly(hullDict[name], yzList)
-                printVertice(saveLocation + "/" + name, vertice)
+                if keyword == None:
+                    keyword = ''
+                
+                printVertice(saveLocation + "/" + name  + "_"+keyword, vertice)
 
         return hullDict
         
@@ -616,7 +619,7 @@ class Cells(object):
             for branchList in self.Branches.values():
                 branchList = convertCoord(coordinateCoefficient, branchList)
     
-    def normalizeX(self, botPlaneCell, topPlaneCell):
+    def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne):
         
         if (not botPlaneCell.NCBEboolean[0]) or (not topPlaneCell.NCBEboolean[0]) :
             raise Exception("Bot cell or Top cell does not have nodes.")
@@ -628,17 +631,29 @@ class Cells(object):
         if self.NCBEboolean[0]:
             for nodeList in self.Nodes.values():
                 for node in nodeList:
+                    
                     node[2] = (topX - node[2])/( topX - botX)
+                    
+                    if not zeroToOne:
+                        node[2] = node[2] * -45 + 62.5
+        
         
         if self.NCBEboolean[1]:
             for commentList in self.Comments.values():
                 for comment in commentList:
+                   
                     comment[2] = (topX - comment[2])/(topX - botX)
-        
+                    
+                    if not zeroToOne:
+                        comment[2] = comment[2] * -45 + 62.5
+                    
         if self.NCBEboolean[3]:
             for branchList in self.Branches.values():
                 for branch in branchList:
-                    branch[2] = (topX - branch[2])/(topX - botX)        
+                    branch[2] = (topX - branch[2])/(topX - botX)
+                    
+                    if not zeroToOne:
+                        branch[2] = branch[2] * -45 + 62.5        
     """
     get plane vector. 
     """
@@ -698,7 +713,7 @@ class Cells(object):
         return avgDict
     
         
-    def getDeviation(self, onlyX = False, StandardDeviation = True, Node = True, keyword = None):
+    def getDeviation(self, StandardDeviation = True, Node = True, keyword = None):
         if not (self.NCBEboolean[0]):
             raise Exception("This cell does not have nodes.")
         devDict = {}
@@ -716,22 +731,17 @@ class Cells(object):
             
             devDict.setdefault(name)
             if StandardDeviation:
-                if onlyX:
-                    devDict[name] = stdev1D(nodeList)[2]
-                else:
+
                     
-                    devDict[name] = stdev1D(nodeList)
+                devDict[name] = stdev1D(nodeList)
             else:
-                if onlyX:
-                    devDict[name] = abstdev1D(nodeList)[2]
-                else:
-                    devDict[name] = abstdev1D(nodeList)
+                devDict[name] = abstdev1D(nodeList)
             
         return devDict
 
     def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None, toCell = False):
         def compareNode(nodeA, nodeB):
-            if (math.fabs((nodeA[0] - nodeB[0]) < threshold)) and (math.fabs((nodeA[1] - nodeB[1]) < threshold)) and (math.fabs((nodeA[2] - nodeB[2]) < threshold)):
+            if (math.fabs((nodeA[0] - nodeB[0])) < threshold) and (math.fabs((nodeA[1] - nodeB[1])) < threshold) and (math.fabs((nodeA[2] - nodeB[2])) < threshold):
                 return True
             else:
                 return False
@@ -810,7 +820,40 @@ class Cells(object):
             for node in listDict[name]:
                 newDictDict[node[4]][node[len(node) - 1]].append(node)
         
+        for name in newDictDict.keys():
+            for name2 in newDictDict[name].keys():
+                if len(newDictDict[name][name2]) ==0:
+                    del newDictDict[name][name2]
+        
+        for name in newDictDict.keys():
+            if len(newDictDict[name].keys()) == 0:
+                del newDictDict[name]
+        
+        
+        
         return newDictDict
+    
+    def findOverlapArea(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None):
+        selfPolygonDict = self.toPolygon(useNodeForSelf, keywordForSelf)
+        otherPolygonDict = otherCell.toPolygon(useNodeForOther, keywordForOther)
+
+        newDictDict = {}
+        for name1 in selfPolygonDict.keys():
+            newDictDict.setdefault(name1)
+            newDict = {}
+            for name2 in otherPolygonDict.keys():
+                newDict.setdefault(name2)
+                
+                if selfPolygonDict[name1].intersects(otherPolygonDict[name2]):
+                    newDict[name2] = (selfPolygonDict[name1].intersection(otherPolygonDict[name2])).area
+                else:
+                    newDict[name2] = 0 
+                
+            newDictDict[name1] = newDict
+        
+        return newDictDict
+            
+        
         
              
     def filterComments(self):

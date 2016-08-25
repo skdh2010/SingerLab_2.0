@@ -6,15 +6,26 @@ Created on Aug 17, 2016
 from ImportList import *
 from ImportListForCell import *
 from Cells import *
+from CellsComparor import *
 
-CB = Cells("D:/Download/CBs.xml")
-AII = Cells("D:/Download/AIIs.xml")
-Up = Cells("D:/Download/ON_SAC.xml")
-Down = Cells("D:/Download/OFF_SAC.xml")
+top =  'C:\Users\Lee\Downloads\OFF_SAC.xml'
+bot = 'C:\Users\Lee\Downloads\ON_SAC.xml'
 
-CB.changeCoordinate(Up.getCoefInfo().values()[0])
-AII.changeCoordinate(Up.getCoefInfo().values()[0])
+AII = 'C:\Users\Lee\Downloads\AII.xml'
+CB = 'C:\Users\Lee\Downloads\CB.xml'
 
-print CB.findClosePoints(AII, 500)
 
-print CB.findClosePointsDict(AII, 500)
+
+synapseAnalyzer("C:/Users/Lee/Downloads", top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
+
+connectionAnalyzer("C:/Users/Lee/Downloads", top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
+
+
+
+printConvexHull("C:/Users/Lee/Downloads", top, bot, AII, True)
+printConvexHull("C:/Users/Lee/Downloads", top, bot, AII, False, 'utput')
+printConvexHull("C:/Users/Lee/Downloads", top, bot, CB, True, 'ibbon')
+
+
+
+CBsAnalyzer('C:/Users/Lee/Downloads' ,top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')

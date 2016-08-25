@@ -21,6 +21,8 @@ def yzExtract(arrNode):
 def vertexToPoly(hull, points):
     returnList = []
     vertex = hull.vertices
+
+    
     
     for item in vertex:
         returnList.append(points[item])

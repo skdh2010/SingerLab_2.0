@@ -201,7 +201,7 @@ def abstdev1D (aList):
         newList.append(math.fabs(item[2]-avgVal))
     
     newList.sort()
-    print newList
+
     val = newList[len(newList)/2]
     
     return val
