@@ -57,7 +57,7 @@ class Cells(object):
             self.XMLfile = ET.parse(cellAddress)  
              
             self.Names = self.nameExtract()     
-            self.Names = self.__getNameOfCells(keywordForCell)     
+            self.Names = self.getNameOfCells(keywordForCell)     
                 
             self.Parameter = self.parameterExtract()    
             self.scale = self.scaleExtract()
@@ -72,7 +72,7 @@ class Cells(object):
                 self.Edges = self.edgesExtract()
             
             if NCBEboolean[3]:
-                Branch = self.branchExtract() 
+                self.Branches = self.branchExtract() 
             
             
     """
@@ -101,9 +101,9 @@ class Cells(object):
         if z == None or y == None or x == None:
             raise Exception('x or y or z does not exist.')
         
-        #scale.append(26)
-        #scale.append(13.2)
-        #scale.append(13.2)
+        scale.append(z)
+        scale.append(y)
+        scale.append(x)
         return scale
     """
     return nodes in dictionary form
@@ -140,7 +140,8 @@ class Cells(object):
                 node.append(c)
                 node.append(d)
                 node.append(thingCellName)
-                Nodes[thingCellName].append(node)            
+                Nodes[thingCellName].append(node)      
+        return Nodes      
     """
     return min and max node number in a cell
     [min max]
@@ -172,7 +173,7 @@ class Cells(object):
     return list of comments
     [node content]
     """
-    def commentExtract(self, indexnumber = 2):
+    def commentExtract(self, indexnumber = 0):
         NonNamedCellIndex = 1
         Comments = []
         things = self.XMLfile.getroot()
@@ -567,8 +568,8 @@ class Cells(object):
                 raise Exception("The file name is not specified.")
             if not os.path.isdir(os.path.dirname(saveLocation)):
                 raise Exception(os.path.dirname(saveLocation) + "does not exist.")
-            if os.path.exists(saveLocation):
-                raise Exception(saveLocation + " already exists.")
+            #if os.path.exists(saveLocation):
+            #    raise Exception(saveLocation + " already exists.")
         
         NodeDict = {}
         if Nodes:
@@ -604,8 +605,6 @@ class Cells(object):
         return hullDict
         
         
-        
-        print "todo"
     def changeCoordinate(self, coordinateCoefficient):
         if self.NCBEboolean[0]:
             for nodeList in self.Nodes.values():
@@ -667,7 +666,7 @@ class Cells(object):
             coefDict[name] = getPlaneCoef2(nodeList)  
         
         return coefDict
-    def getMidPoint(self, Average = True, Node = True, keyword = None):
+    def getMidPoint(self, onlyX = False, Average = True, Node = True, keyword = None):
         if not (self.NCBEboolean[0]):
             raise Exception("This cell does not have nodes.")
         avgDict = {}
@@ -686,14 +685,20 @@ class Cells(object):
             avgDict.setdefault(name)
             
             if Average:
-                avgDict[name] = getAvgPoint(nodeList)  
+                if onlyX:
+                    avgDict[name] = getAvgPoint(nodeList)[2]
+                else:
+                    avgDict[name] = getAvgPoint(nodeList)  
             else:
-                avgDict[name] = getMedianPoint(nodeList)
+                if onlyX:
+                    avgDict[name] = getMedianPoint(nodeList)[2]
+                else:
+                    avgDict[name] = getMedianPoint(nodeList)
 
         return avgDict
     
         
-    def getDeviation(self, StandardDeviation = True, Node = True, keyword = None):
+    def getDeviation(self, onlyX = False, StandardDeviation = True, Node = True, keyword = None):
         if not (self.NCBEboolean[0]):
             raise Exception("This cell does not have nodes.")
         devDict = {}
@@ -711,13 +716,20 @@ class Cells(object):
             
             devDict.setdefault(name)
             if StandardDeviation:
-                devDict[name] = stdev1D(nodeList)
+                if onlyX:
+                    devDict[name] = stdev1D(nodeList)[2]
+                else:
+                    
+                    devDict[name] = stdev1D(nodeList)
             else:
-                devDict[name] = abstdev1D(nodeList)
-        
+                if onlyX:
+                    devDict[name] = abstdev1D(nodeList)[2]
+                else:
+                    devDict[name] = abstdev1D(nodeList)
+            
         return devDict
 
-    def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None):
+    def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None, toCell = False):
         def compareNode(nodeA, nodeB):
             if (math.fabs((nodeA[0] - nodeB[0]) < threshold)) and (math.fabs((nodeA[1] - nodeB[1]) < threshold)) and (math.fabs((nodeA[2] - nodeB[2]) < threshold)):
                 return True
@@ -727,7 +739,8 @@ class Cells(object):
         selfNodeDict = {}
         if useNodeForSelf:
             if self.NCBEboolean[0]:
-                selfNodeDict = self.allNodes()
+                
+                selfNodeDict = self.Nodes
             else:
                 raise Exception("The cell does not have Nodes.")
         else:
@@ -750,8 +763,9 @@ class Cells(object):
                 else:
                     otherNodeList = otherCell.commentWithKeywordExtract(keywordForOther)
                     
+        newNodeDict = {}            
         for name in selfNodeDict.keys():
-            newNodeDict = {}
+            
             newNodeDict.setdefault(name)
             newNodeDict[name] = []
             
@@ -762,19 +776,48 @@ class Cells(object):
                     if compareNode(newNode, otherNode):
                         newNode.append(otherNode[3])
                         newNode.append(otherNode[4])
-                        newNodeDict[name].append(selfNode)
+                        newNodeDict[name].append(newNode)
                         break
+        if toCell:
+                
+                
+            newCell = Cells(None, None, [False, True, False, False], True)
+            newCell.NCBEboolean = [False, True, False, False]
+            newCell.Names = newNodeDict.keys()
+            newCell.Parameter = self.Parameter
+            newCell.scale = self.scale
+            newCell.Comments =  newNodeDict
             
-            
-        newCell = Cells(None, None, [False, True, False, False], True)
-        newCell.NCBEboolean = [False, True, False, False]
-        newCell.Names = newNodeDict.keys()
-        newCell.Parameter = self.Parameter
-        newCell.scale = self.scale
-        newCell.Comments =  newNodeDict
+            return newCell
         
-                
-                
+        else:
+            return newNodeDict
+    
+    
+    def findClosePointsDict(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None):
+        listDict = self.findClosePoints(otherCell, threshold, useNodeForSelf, keywordForSelf, useNodeForOther, keywordForOther)
+        
+        newDictDict = {}
+        for name1 in self.Names:
+            newDictDict.setdefault(name1)
+            newDict = {}
+            for name2 in otherCell.Names:
+                newDict.setdefault(name2)
+                newDict[name2] = []
+            newDictDict[name1] = newDict
+        
+        for name in listDict:
+            for node in listDict[name]:
+                newDictDict[node[4]][node[len(node) - 1]].append(node)
+        
+        return newDictDict
+        
+             
+    def filterComments(self):
+        print "todo"       
+        
+    def filterNodes(self):
+        print "todo"
                     
                     
                     
