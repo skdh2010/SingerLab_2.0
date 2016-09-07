@@ -249,7 +249,7 @@ class Cells(object):
             EdgeNode[key] = [item for item in indivCellNode if item[3] in indivEdge]
                        
 
-        return EdgeNode
+        return copy.copy(EdgeNode)
     """
     return edge in dictionary form
     { cell: [target source]}
@@ -355,13 +355,19 @@ class Cells(object):
             allNodes = allNodes + nodes
         allNodes.sort(key = lambda x:x[sortIndex])
         return allNodes
+    def allEdgesExtract(self):
+        allEdges = []
+        for edges in self.Edges.values():
+            allEdges = allEdges + edges
+        return allEdges
+    
     """
     return edges in list form
     you have freedome to sort this however you want. 0 -z 1- y 2-x 
     {[z y x id cellName]}
      id is the source only! 
     """
-    def allEdgesExtract(self,sortIndex):
+    def allEdgeNodesExtract(self,sortIndex):
         EdgeNode = self.__edgeNodeExtract()      
         allEdges = []
         for edges in EdgeNode.values():
@@ -482,8 +488,54 @@ class Cells(object):
         for Name in Names:
             separtor(self, saveDir + "/" + Name)    
         
-    def toVTK(self):
-        print "todo"
+    def toVTK(self, commentonlyToo = True):
+        self.reorderNodeID()
+        
+        
+        
+        head1 = "# vtk DataFile Version 3.0\n"
+        head2 = "vtk output\n"
+        head3 = "ASCII\n"
+        head4 = "DATASET POLYDATA\n\n"
+        head = head1 + head2 + head3 + head4
+        for name in self.Names:
+            nodes = self.Nodes[name]
+            self.Comments[name].sort(key = lambda comment: comment[4])
+            self.Edges[name].sort(key = lambda edge:edge[1] )
+            
+            comments = self.Comments[name]
+            edges = self.Edges[name]
+        
+            with open(name + ".vtk", 'w') as f:
+                f.write(head)
+                f.write("POINTS " + str(len(nodes)) + " float\n")
+                
+                for node in nodes:
+                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
+                
+                f.write("\nLINES " + str(len(edges)) + " " + str( 3* len(edges)) + "\n")
+                for edge in edges:
+                    f.write("2 " + str(edge[1]) +" " + str(edge[0]) + "\n")
+                    
+                f.write("\nVERTICES "+ str(len(nodes)) + " " + str(len(nodes) * 2) + "\n")
+                
+                for node in nodes:
+                    f.write("1 " + str(node[3]) + "\n")
+            
+            with open(name + "_coments.vtk", 'w') as f:
+                f.write(head)
+                f.write("POINTS " + str(len(comments)) + " float\n")
+                
+                for node in comments:
+                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
+                
+                f.write("\nVERTICES "+ str(len(comments)) + " " + str(len(comments) * 2) + "\n")
+                count = 0
+                for comment in comments:
+                    f.write("1 " + str(count) + "\n")
+                    count = count + 1
+        
+         
         
     def toManyCells(self, NCBEboolean):
         cellDict = {}
@@ -617,7 +669,7 @@ class Cells(object):
                 commentList = convertCoord(coordinateCoefficient, commentList)
         if self.NCBEboolean[3]:    
             for branchList in self.Branches.values():
-                branchList = convertCoord(coordinateCoefficient, branchList)
+                branchList = convertCoord(coordinateCoefficient, branchList)    
     
     def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne):
         
@@ -657,8 +709,70 @@ class Cells(object):
     """
     get plane vector. 
     """
+    def reorderNodeID(self):    
+        
+        def findMapping(nodeList):
+            returnList = []
+            count = 0
+            
+            for node in nodeList:
+                newNode = []
+                newNode.append(node[3])
+                newNode.append(count)
+                returnList.append(newNode)
+                count = count + 1
+            
+            return returnList
+        
+        def changeIndex(mapings, nodeList, index ):
+            newNodeList = []
+            
+            for map in mapings:
+                for node in nodeList:
+                    if map[0] == node[index]:
+                        newNode = copy.copy(node)
+                        newNode[index] = map[1]
+                        
+                        newNodeList.append(newNode)
+            
+            return newNodeList
     
-    """###################FIX IT FIX IT#####################""" 
+        
+        newNodes = {}
+        newEdges = {}
+        newComments = {}
+        newBranches = {}
+        
+        for name in self.Names:
+            self.Nodes[name].sort(key = lambda node:node[2])
+            
+            
+            Nodes = self.Nodes[name]
+            Edges = self.Edges[name]
+            Comments = self.Comments[name]
+            Branches = self.Branches[name]        
+            
+            maping = findMapping(Nodes)
+            
+           
+            
+            newNodes.setdefault(name)
+            newNodes[name] = changeIndex(maping, Nodes, 3)
+            newEdges.setdefault(name)
+            newEdges[name] = changeIndex(maping, changeIndex(maping, Edges, 1), 0)
+            newComments.setdefault(name)
+            newComments[name] = changeIndex(maping, Comments, 3)
+            newBranches.setdefault(name)
+            newBranches[name] = changeIndex(maping, Branches, 3)
+            
+        self.Nodes = newNodes
+        self.Edges = newEdges
+        self.Comments = newComments
+        self.Branches = newBranches
+        
+        print self.Comments
+        print self.Branches
+            
     
     
     def getCoefInfo(self, Node = True, keyword = None):

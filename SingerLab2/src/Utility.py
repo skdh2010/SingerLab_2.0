@@ -29,7 +29,7 @@ def CellPrinter(Cellcoin, filename):
         for item1 in node:
             a = str(int(item1[0]/scaler[0]))
             b = str(int(item1[1]/scaler[1]))
-            c = str(int(item1[2]/scaler[2]))
+            c = str(int(item1[2] * 1000/scaler[2]))
             d = str(item1[3])
             e = item1[4]
             node=ET.SubElement(node1, "node", id= d, radius="10", x=c, y=b, z=a, inVP="1", inMag="1", time="0")    
@@ -110,5 +110,21 @@ def separtor(Cellcoin, cellname):
     
 
 
+def convertToVTK(Cells, saveLocation):
+
+    head1 = "# vtk DataFile Version 3.0\n"
+    head2 = "vtk output\n"
+    head3 = "ASCII\n"
+    head4 = "DATASET POLYDATA\n\n"
+    head = head1 + head2 + head3 + head4
+    
+    for name in Cells.Names:
+        with open(saveLocation + "/" + name + ".vtk", 'w') as f:
+            f.write(head)
+            
+    
+    
+    
+    
     
     
