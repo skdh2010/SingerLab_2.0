@@ -407,20 +407,42 @@ class Cells(object):
                     break
         return newComments
     def commentWithKeywordExtractDict(self, key1):
+        if key1 == None:
+            return self.Comments
         newComment = {}
+        
+        
+        
         for item1 in self.Comments.keys():
             newComment.setdefault(item1)
             newComment[item1] = []
-            
-            
-        for item2 in self.Comments.keys():
-            
-            for comment in self.Comments[item2]:
+        
+        if isinstance(key1, str):
+            for item2 in self.Comments.keys():
                 
-                #print comment[5]
-                if comment[5].find(key1) != -1:
-                    newComment[item2].append(comment)
+                for comment in self.Comments[item2]:
                     
+                    #print comment[5]
+                    if comment[5].find(key1) != -1:
+                        newComment[item2].append(comment)
+                        
+                        
+        elif isinstance(key1, list) and (len(key1) == 0):
+            return self.Comments
+        
+        
+        elif isinstance(key1, list) and (len(key1) != 0) and isinstance(key1[0],str) :
+            for item2 in self.Comments.keys():
+                for comment in self.Comments[item2]:
+                    #print comment[5]
+                    for akey in key1:
+                        if comment[5].find(akey) != -1:
+                            newComment[item2].append(comment)
+                            break
+                        
+        else:
+            raise "key1 is either a single string or a list of strings"
+        
         newNewComment = {}
         
         for item3 in newComment.keys():
@@ -488,9 +510,10 @@ class Cells(object):
         for Name in Names:
             separtor(self, saveDir + "/" + Name)    
         
-    def toVTK(self, commentonlyToo = True):
-        self.reorderNodeID()
+    def toVTK(self, fileLoc, commentonlyToo = True, keyForComment = None, Commentcolor = "0.500000"):
         
+        newCell = copy.copy(self)
+        newCell.reorderNodeID(keyForComment)
         
         
         head1 = "# vtk DataFile Version 3.0\n"
@@ -498,15 +521,15 @@ class Cells(object):
         head3 = "ASCII\n"
         head4 = "DATASET POLYDATA\n\n"
         head = head1 + head2 + head3 + head4
-        for name in self.Names:
-            nodes = self.Nodes[name]
+        for name in newCell.Names:
+            nodes = newCell.Nodes[name]
             self.Comments[name].sort(key = lambda comment: comment[4])
             self.Edges[name].sort(key = lambda edge:edge[1] )
             
-            comments = self.Comments[name]
-            edges = self.Edges[name]
+            comments = newCell.Comments[name]
+            edges = newCell.Edges[name]
         
-            with open(name + ".vtk", 'w') as f:
+            with open(fileLoc + "/" + name + ".vtk", 'w') as f:
                 f.write(head)
                 f.write("POINTS " + str(len(nodes)) + " float\n")
                 
@@ -521,8 +544,21 @@ class Cells(object):
                 
                 for node in nodes:
                     f.write("1 " + str(node[3]) + "\n")
+                
+                f.write("\nPOINT_DATA " + str(len(nodes)) + "\n") 
+                f.write("SCALARS scalars float 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for node in nodes:
+                    f.write("0.000000" + "\n")
+                
+            if not commentonlyToo:
+                continue
             
-            with open(name + "_coments.vtk", 'w') as f:
+            varname = ""
+            if keyForComment != None:
+                varname = str(keyForComment)
+            
+            with open(fileLoc + "/" + name +"_"+ varname +"_comments.vtk", 'w') as f:
                 f.write(head)
                 f.write("POINTS " + str(len(comments)) + " float\n")
                 
@@ -534,10 +570,15 @@ class Cells(object):
                 for comment in comments:
                     f.write("1 " + str(count) + "\n")
                     count = count + 1
-        
+                
+                f.write("\nPOINT_DATA " + str(len(comments)) + "\n") 
+                f.write("SCALARS scalars float 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for comment in comments:
+                    f.write(Commentcolor+"\n")
          
         
-    def toManyCells(self, NCBEboolean):
+    def toManyCells(self, NCBEboolean = [True, True, True, True]):
         cellDict = {}
         for name in self.Names:
             cellDict.setdefault(name)
@@ -655,7 +696,7 @@ class Cells(object):
                 if keyword == None:
                     keyword = ''
                 
-                printVertice(saveLocation + "/" + name  + "_"+keyword, vertice)
+                printVertice(saveLocation + "/" + name  + "_"+str(keyword), vertice)
 
         return hullDict
         
@@ -709,7 +750,7 @@ class Cells(object):
     """
     get plane vector. 
     """
-    def reorderNodeID(self):    
+    def reorderNodeID(self, keys = None):    
         
         def findMapping(nodeList):
             returnList = []
@@ -724,7 +765,7 @@ class Cells(object):
             
             return returnList
         
-        def changeIndex(mapings, nodeList, index ):
+        def changeIndex(mapings, nodeList, index):
             newNodeList = []
             
             for map in mapings:
@@ -736,12 +777,12 @@ class Cells(object):
                         newNodeList.append(newNode)
             
             return newNodeList
-    
-        
         newNodes = {}
         newEdges = {}
         newComments = {}
         newBranches = {}
+        COMMENTS = self.commentWithKeywordExtractDict(keys)
+        
         
         for name in self.Names:
             self.Nodes[name].sort(key = lambda node:node[2])
@@ -749,29 +790,30 @@ class Cells(object):
             
             Nodes = self.Nodes[name]
             Edges = self.Edges[name]
-            Comments = self.Comments[name]
+            Comments = COMMENTS[name]
             Branches = self.Branches[name]        
             
-            maping = findMapping(Nodes)
-            
-           
-            
+            nodeID = set([item[3] for item in Nodes])
+            commentID = set(item[3] for item in Comments)
+            nodeID.difference_update(commentID)
+            Nodes = [item for item in Nodes if item[3] in nodeID]
+
+            maping1 = findMapping(Nodes)
+            maping2 = findMapping(Comments)
             newNodes.setdefault(name)
-            newNodes[name] = changeIndex(maping, Nodes, 3)
+            newNodes[name] = changeIndex(maping1, Nodes, 3)
             newEdges.setdefault(name)
-            newEdges[name] = changeIndex(maping, changeIndex(maping, Edges, 1), 0)
+            newEdges[name] = changeIndex(maping1, changeIndex(maping1, Edges, 1), 0)
             newComments.setdefault(name)
-            newComments[name] = changeIndex(maping, Comments, 3)
+            newComments[name] = changeIndex(maping2, Comments, 3)
             newBranches.setdefault(name)
-            newBranches[name] = changeIndex(maping, Branches, 3)
+            newBranches[name] = changeIndex(maping1, Branches, 3)
             
         self.Nodes = newNodes
         self.Edges = newEdges
         self.Comments = newComments
         self.Branches = newBranches
         
-        print self.Comments
-        print self.Branches
             
     
     
