@@ -58,7 +58,7 @@ def CellPrinter(Cellcoin, filename):
     
 
 """ Separator Printer  """
-def separtor(Cellcoin, cellname):
+def separtor(Cellcoin, cellname, saveLoc):
     node = Cellcoin.Nodes[cellname]
     edge = Cellcoin.Edges[cellname]
     comment = Cellcoin.Comments[cellname]
@@ -103,7 +103,7 @@ def separtor(Cellcoin, cellname):
         node=ET.SubElement(branch1, "branchpoint", id = a)
     
     print("done")
-    newfile = cellname
+    newfile = saveLoc + "/" + cellname + ".xml"
     pile = open(newfile, "w")
     pile.writelines(ET.tostring(root, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
     pile.close()    

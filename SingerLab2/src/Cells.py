@@ -5,6 +5,8 @@ Created on Aug 17, 2016
 '''
 from ImportList import *
 from ImportListForCell import *
+from _ast import Num
+from netbios import NCBENUM
 
 class Cells(object):
     """
@@ -271,14 +273,19 @@ class Cells(object):
                 
             Edges.setdefault(thingCellName)
             Edges[thingCellName] = []
+            
             for elem in child.iterfind('edges/edge'):
                 edge = []
+                
                 a=int(elem.get('target'))
                 b=int(elem.get('source'))
                 edge.append(a)
                 edge.append(b)
                 edge.append(thingCellName)
                 Edges[thingCellName].append(edge)
+                
+                    
+            
         return Edges
     """
     return list of names of cells
@@ -324,10 +331,16 @@ class Cells(object):
             indivCellNode = self.Nodes[key]
             indivEdge = self.Edges[key]
             indEdSource = set(x[1] for x in indivEdge)
+            indEdArr = set(x[0] for x in indivEdge)
+            indEdSource = indEdSource.union(indEdArr)
             EdgeNode[key] = [item for item in indivCellNode if item[3] in indEdSource]
        
-        return EdgeNode
-
+        return copy.copy(EdgeNode)
+    
+    def edgeOnlyNode(self):
+        self.Nodes = self.__edgeNodeExtract()
+        
+    
     """
     return edges in dictionary form
     { cell: [z y x id cellName]}
@@ -402,7 +415,7 @@ class Cells(object):
         newComments = []
         for comment in Comments:
             for keyword in args:
-                if comment[5].find(keyword) != -1:
+                if comment[5].lower().find(keyword.lower()) != -1:
                     newComments.append(comment)
                     break
         return newComments
@@ -423,7 +436,7 @@ class Cells(object):
                 for comment in self.Comments[item2]:
                     
                     #print comment[5]
-                    if comment[5].find(key1) != -1:
+                    if comment[5].lower().find(key1.lower()) != -1:
                         newComment[item2].append(comment)
                         
                         
@@ -436,7 +449,7 @@ class Cells(object):
                 for comment in self.Comments[item2]:
                     #print comment[5]
                     for akey in key1:
-                        if comment[5].find(akey) != -1:
+                        if comment[5].lower().find(akey.lower()) != -1:
                             newComment[item2].append(comment)
                             break
                         
@@ -508,9 +521,9 @@ class Cells(object):
         
         Names = self.Names
         for Name in Names:
-            separtor(self, saveDir + "/" + Name)    
+            separtor(self, Name, saveDir)    
         
-    def toVTK(self, fileLoc, commentonlyToo = True, keyForComment = None, Commentcolor = "0.500000"):
+    def toVTK(self, fileLoc, commentonlyToo = True, keyForComment = None, Commentcolor = "0.500000", skeletonColor = "0.000000"):
         
         newCell = copy.copy(self)
         newCell.reorderNodeID(keyForComment)
@@ -528,6 +541,7 @@ class Cells(object):
             
             comments = newCell.Comments[name]
             edges = newCell.Edges[name]
+            
         
             with open(fileLoc + "/" + name + ".vtk", 'w') as f:
                 f.write(head)
@@ -549,7 +563,7 @@ class Cells(object):
                 f.write("SCALARS scalars float 1\n")
                 f.write("LOOKUP_TABLE default\n")
                 for node in nodes:
-                    f.write("0.000000" + "\n")
+                    f.write(skeletonColor + "\n")
                 
             if not commentonlyToo:
                 continue
@@ -617,6 +631,53 @@ class Cells(object):
             
             cellDict[name] = temp
         return cellDict
+    
+    def toCellsWithSpecificNames(self, comment = None):
+        if comment == None:
+            return self
+    
+        cell = Cells(None, None, [True, True, True, True], True)
+        nodeDict = {}
+        edgeDict = {}
+        commentDict = {}
+        branchDict = {}
+        nameList = []
+ 
+        for name in self.Names:
+            skip = True
+            for sname in comment:
+                s2 = sname.lower()
+                s1 = name.lower()
+                if s1 == s2:
+                    skip = False
+            if skip:
+                continue
+                    
+            nodeDict.setdefault(name)
+            nodeDict[name] = self.Nodes[name]
+            
+            edgeDict.setdefault(name)
+            edgeDict[name] = self.Edges[name]
+            
+            commentDict.setdefault(name)
+            commentDict[name] = self.Comments[name]
+      
+            branchDict.setdefault(name)
+            branchDict[name] = self.Branches[name]
+                
+            nameList.append(name)
+       
+        cell.Nodes = nodeDict
+        cell.Edges = edgeDict
+        cell.Comments = commentDict
+        cell.Branches = branchDict
+        cell.NCBEboolean = [True, True, True, True]
+        cell.Names = nameList  
+        cell.Parameter = self.Parameter
+        cell.scale = self.scale
+        
+        return cell
+    
     def addCells(self):
         print "todo"
     def extractCells(self, cellnames):
@@ -651,6 +712,8 @@ class Cells(object):
         hullDict = self.toConvexHull(Nodes, keyword)
         polyDict = {}
         for name in NodeDict.keys():
+            if hullDict[name] == None:
+                continue
             polyDict.setdefault(name)
             polyDict[name] = Polygon(vertexToPoly(hullDict[name], yzExtract(NodeDict[name])))
         
@@ -684,19 +747,21 @@ class Cells(object):
             nodeList = NodeDict[name]
             
             if len(nodeList) < 3:
-                raise name + " list have less than 3 nodes; not enough for convex hull. "
-            
-            yzList = yzExtract(nodeList)
-            
-            hullDict.setdefault(name)
-            hullDict[name] = ConvexHull(yzList)
-            
-            if printCSV:
-                vertice = vertexToPoly(hullDict[name], yzList)
-                if keyword == None:
-                    keyword = ''
+                #raise Exception( name + " list have less than 3 nodes; not enough for convex hull. ")
+                print name + " has less than 3 nodes"
+                hullDict[name] = None
+            else:
+                yzList = yzExtract(nodeList)
                 
-                printVertice(saveLocation + "/" + name  + "_"+str(keyword), vertice)
+                hullDict.setdefault(name)
+                hullDict[name] = ConvexHull(yzList)
+                
+                if printCSV:
+                    vertice = vertexToPoly(hullDict[name], yzList)
+                    if keyword == None:
+                        keyword = ''
+                    
+                    printVertice(saveLocation + "/" + name  + "_"+str(keyword), vertice)
 
         return hullDict
         
@@ -712,7 +777,7 @@ class Cells(object):
             for branchList in self.Branches.values():
                 branchList = convertCoord(coordinateCoefficient, branchList)    
     
-    def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne):
+    def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne, extraFactor = 1):
         
         if (not botPlaneCell.NCBEboolean[0]) or (not topPlaneCell.NCBEboolean[0]) :
             raise Exception("Bot cell or Top cell does not have nodes.")
@@ -728,7 +793,7 @@ class Cells(object):
                     node[2] = (topX - node[2])/( topX - botX)
                     
                     if not zeroToOne:
-                        node[2] = node[2] * -45 + 62.5
+                        node[2] = (node[2] * 45 + 27.5) * extraFactor
         
         
         if self.NCBEboolean[1]:
@@ -738,7 +803,7 @@ class Cells(object):
                     comment[2] = (topX - comment[2])/(topX - botX)
                     
                     if not zeroToOne:
-                        comment[2] = comment[2] * -45 + 62.5
+                        comment[2] = (comment[2] * 45 + 27.5) * extraFactor
                     
         if self.NCBEboolean[3]:
             for branchList in self.Branches.values():
@@ -746,7 +811,7 @@ class Cells(object):
                     branch[2] = (topX - branch[2])/(topX - botX)
                     
                     if not zeroToOne:
-                        branch[2] = branch[2] * -45 + 62.5        
+                        branch[2] = (branch[2] * 45 + 27.5) * extraFactor
     """
     get plane vector. 
     """
@@ -785,6 +850,7 @@ class Cells(object):
         
         
         for name in self.Names:
+        
             self.Nodes[name].sort(key = lambda node:node[2])
             
             
@@ -792,6 +858,7 @@ class Cells(object):
             Edges = self.Edges[name]
             Comments = COMMENTS[name]
             Branches = self.Branches[name]        
+            
             
             nodeID = set([item[3] for item in Nodes])
             commentID = set(item[3] for item in Comments)
@@ -808,6 +875,10 @@ class Cells(object):
             newComments[name] = changeIndex(maping2, Comments, 3)
             newBranches.setdefault(name)
             newBranches[name] = changeIndex(maping1, Branches, 3)
+            
+            print name
+            print len(Edges)
+            print len(newEdges[name])
             
         self.Nodes = newNodes
         self.Edges = newEdges
@@ -896,8 +967,16 @@ class Cells(object):
         return devDict
 
     def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None, toCell = False):
-        def compareNode(nodeA, nodeB):
+        def compareNodeCube(nodeA, nodeB):
             if (math.fabs((nodeA[0] - nodeB[0])) < threshold) and (math.fabs((nodeA[1] - nodeB[1])) < threshold) and (math.fabs((nodeA[2] - nodeB[2])) < threshold):
+                return True
+            else:
+                return False
+            
+        def compareNode(nodeA, nodeB):
+            dist = (nodeA[0] - nodeB[0])*(nodeA[0] - nodeB[0])+(nodeA[1] - nodeB[1])*(nodeA[1] - nodeB[1])+(nodeA[2] - nodeB[2])*(nodeA[2] - nodeB[2])
+            thsq = threshold * threshold
+            if dist < thsq:
                 return True
             else:
                 return False
