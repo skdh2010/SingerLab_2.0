@@ -28,7 +28,7 @@ saveLoc = "C:\Users\Lee\Downloads\check"
 
 topCell= Cells(top)
 print topCell.getCoefInfo()
-
+print "yolo"
 """
 
 printConvexHull(saveLoc, top, bot, AII, True)
