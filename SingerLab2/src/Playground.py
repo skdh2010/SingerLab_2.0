@@ -11,12 +11,24 @@ from os import listdir
 top=  'C:\Users\Lee\Downloads\check\OFF.xml'
 bot = 'C:\Users\Lee\Downloads\check\ON.xml'
 
+<<<<<<< HEAD
 ex = "C:/Users/Nao/Desktop/annotation.xml"
 
 saveLoc = "C:\Users\Nao\Desktop"
+=======
+AII = 'C:\Users\Lee\Downloads\check\AIIanalysis.xml'
+AIIvtk = 'C:\Users\Lee\Downloads\check\AIIvtk.nml'
+CB =  'C:\Users\Lee\Downloads\check\CB.nml'
 
+p1 = 'C:\Users\Lee\Downloads\pCRH1.nml'
+p2 = 'C:\Users\Lee\Downloads\pCRH2.nml'
+>>>>>>> origin/master
 
+saveLoc = "C:\Users\Lee\Downloads\check"
 
+#groupDict = {"group1":["OFF_CBn","OFF_CBb","OFF_CBk","OFF_CBa","OFF_CBo","OFF_CBp","OFF_CBd","OFF_CBf","OFF_CBi","OFF_CBr","OFF_CBtt","OFF_CBq","OFF_CBl","OFF_CBx","OFF_CBg","OFF_CBh"], "group2":["OFF_CBuu","OFF_CBrr","OFF_CBbbb","OFF_CBs","OFF_CBaaa","OFF_CBkk","OFF_CBlll","OFF_CBoo","OFF_CBjjj","OFF_CBq","OFF_CBqq","OFF_CBjj"], "group3":["OFF_CBw","OFF_CBll","OFF_CBee","OFF_CBj","OFF_CBy","OFF_CBpp","OFF_CByy","OFF_CBkkk","OFF_CBaa","OFF_CBmm","OFF_CBfff","OFF_CBe","OFF_CBbb","OFF_CBdd"], "group4":["OFF_CBc","OFF_CBxx","OFF_CBcc","OFF_CBii","OFF_CBww"]  }
+
+<<<<<<< HEAD
 Cells(ex).toMultiXML(saveLoc)
 #printConvexHull(saveLoc, top, bot, CB, True)
 #groupDict = {"group1":["OFF_CBn","OFF_CBb","OFF_CBk","OFF_CBa","OFF_CBo","OFF_CBp","OFF_CBd","OFF_CBf","OFF_CBi","OFF_CBr","OFF_CBtt","OFF_CBq","OFF_CBl","OFF_CBx","OFF_CBg","OFF_CBh"], "group2":["OFF_CBuu","OFF_CBrr","OFF_CBbbb","OFF_CBs","OFF_CBaaa","OFF_CBkk","OFF_CBlll","OFF_CBoo","OFF_CBjjj","OFF_CBq","OFF_CBqq","OFF_CBjj"], "group3":["OFF_CBw","OFF_CBll","OFF_CBee","OFF_CBj","OFF_CBy","OFF_CBpp","OFF_CByy","OFF_CBkkk","OFF_CBaa","OFF_CBmm","OFF_CBfff","OFF_CBe","OFF_CBbb","OFF_CBdd"], "group4":["OFF_CBc","OFF_CBxx","OFF_CBcc","OFF_CBii","OFF_CBww"]  }
@@ -32,15 +44,35 @@ connectionAnalyzer(saveLoc, top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
 #print topCell.getCoefInfo()
 
 """
+=======
+#CBsAnalyzer2(saveLoc, top, bot, CB)
+#CBgroupAnalyzer(saveLoc, top, bot, CB, groupDict)
+#synapseAnalyzer(saveLoc, top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
 
+topCell= Cells(top)
+print topCell.getCoefInfo()
+print "yolo"
+"""
 
+printConvexHull(saveLoc, top, bot, AII, True)
 printConvexHull(saveLoc , top, bot, AII, False, 'utput')
 printConvexHull(saveLoc , top, bot, CB, True, 'ibbon')
+>>>>>>> origin/master
+
+CBsAnalyzer(saveLoc ,top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
+
+<<<<<<< HEAD
+printConvexHull(saveLoc , top, bot, AII, False, 'utput')
+printConvexHull(saveLoc , top, bot, CB, True, 'ibbon')
+=======
+connectionAnalyzer(saveLoc, top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
+>>>>>>> origin/master
 
 CBsAnalyzer(saveLoc ,top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
 
 connectionAnalyzer(saveLoc, top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
 
+<<<<<<< HEAD
 """
 
 #Cells(CB).toMultiXML(saveLoc)
@@ -76,6 +108,34 @@ connectionAnalyzer(saveLoc, top, bot, CB, AII, 'ibbon', 'nput', 'nput', 'utput')
 #CBcell.toVTK(saveLoc2, True, "ibbon", "0.500000", "0.700000")
 #AIIcell.toVTK(saveLoc, True, "utput", "0.500000", "0.700000")
 """
+=======
+
+AIIcell = Cells(AIIvtk)
+CBcell =Cells(CB)
+
+topCell = Cells(top)
+botCell = Cells(bot)
+coef = topCell.getCoefInfo().values()[0]
+
+topCell.changeCoordinate(coef)
+botCell.changeCoordinate(coef)
+CBcell.changeCoordinate(coef)
+AIIcell.changeCoordinate(coef)
+
+CBcell.normalizeX(botCell, topCell, False, 500)
+AIIcell.normalizeX(botCell, topCell, False, 500)
+
+saveLoc1 = "C:\Users\Lee\Downloads\check\skeleton"
+saveLoc2 = "C:\Users\Lee\Downloads\check\comment"
+
+topCell.toVTK(saveLoc1, False)
+botCell.toVTK(saveLoc1, False)
+CBcell.toVTK(saveLoc1, False)
+AIIcell.toVTK(saveLoc1, False)
+
+CBcell.toVTK(saveLoc2, True, "ibbon", "0.500000", "0.700000")
+AIIcell.toVTK(saveLoc2, True, "nput", "0.500000", "0.700000")
+>>>>>>> origin/master
 """
 """
 tt1 = Cells(top)
