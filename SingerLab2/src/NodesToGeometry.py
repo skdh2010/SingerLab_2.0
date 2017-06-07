@@ -22,8 +22,6 @@ def vertexToPoly(hull, points):
     returnList = []
     vertex = hull.vertices
 
-    
-    
     for item in vertex:
         returnList.append(points[item])
         
@@ -33,11 +31,13 @@ def vertexToPoly(hull, points):
 
 def printVertice(filename, vertice):
     with open(filename + ".csv", 'wb') as csvfile:
-        fieldnames = ['x','y']
+        newName=os.path.split(filename)[1]
+        
+        fieldnames = [newName+'_x',newName+'_y']
         writer = csv.DictWriter(csvfile, fieldnames =fieldnames)
-        writer.writerow({'x': 'x', 'y': 'y'})
+        writer.writerow({newName+'_x': newName+'_x', newName+'_y': newName+'_y'})
         for vertex in vertice:
-            writer.writerow({'x': vertex[0], 'y': vertex[1]})
+            writer.writerow({ newName+'_x': vertex[0], newName+'_y': vertex[1]})
 
        
         

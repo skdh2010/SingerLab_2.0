@@ -7,6 +7,7 @@ from ImportList import *
 from ImportListForCell import *
 from Cells import *
 
+
 def printConvexHull(saveLoc, top, bot, cellAddress, Node =True, keyword = None):
     cells = Cells(cellAddress)
 
@@ -22,11 +23,75 @@ def printConvexHull(saveLoc, top, bot, cellAddress, Node =True, keyword = None):
     cells.toConvexHull(Node, keyword, True, saveLoc )
 
 
+def CBgroupAnalyzer(saveLoc, top, bot, CBsCells,CBgroupDict):
+    def addArea(dict):
+        sum = 0
+        for key in dict.keys():
+            sum = sum + dict[key]
+        return sum
+    def avg(dict):
+        if len(dict.keys()) == 0:
+            return "All Zero"
+        
+        return addArea(dict)/len(dict.keys())
+    
+    def std(dict):
+        if len(dict.keys()) ==0:
+            return "All Zero"
+        
+        avg = addArea(dict)/len(dict.keys())
+        sum = 0.0
+        for item in dict.values():
+            sum = sum + (item - avg) * (item -avg)
+        return ( math.sqrt(sum/len(dict.keys())) )
+    
+    def omit_zero(dict):
+        dic = {}
+        for key in dict.keys():
+            if dict[key] == 0:
+                continue
+            else:
+                dic.setdefault(key)
+                dic[key] = dict[key]
+        return dic
+    
+    cellDict = {}
+    CB = Cells(CBsCells)
+    
+    topCell = Cells(top)
+    botCell = Cells(bot)
+    
+    coef = topCell.getCoefInfo().values()[0]
+    
+    CB.changeCoordinate(coef)
+
+    for n in CBgroupDict.keys():
+        cellDict.setdefault(n)
+        cellDict[n] = CB.toCellsWithSpecificNames(CBgroupDict[n])
+    
+    for n1 in CBgroupDict.keys():
+        for n2 in CBgroupDict.keys():
+            if n1 == n2:
+                continue
+            else:
+                dicdic = cellDict[n1].findOverlapArea(cellDict[n2], 500, False, "ibbon",False, "ibbon") 
+
+                with open( saveLoc + "/" + n1 + "_" + n2 + ".csv", 'wb') as csvfile:
+                    
+                    fieldnames = ['name1', 'name2', 'overlap_area']
+                    writer = csv.DictWriter(csvfile, fieldnames = fieldnames )
+                    writer.writerow({'name1': 'name1', 'name2':'name2', 'overlap_area':'overlap_area' })
+                    
+                    for key1 in dicdic.keys():
+                        dic = dicdic[key1]
+                        for key2 in dic.keys():
+                        
+                            writer.writerow({'name1': key1, 'name2': key2, 'overlap_area': dic[key2] })
+                    
+            
 
 
-
-
-def CBsAnalyzer( saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon', keyword3 ='nput' , keyword2 = 'nput' ,keyword4= 'utput'):
+def CBsAnalyzer( saveLoc, top, bot,CBsCells, AIIsCells, keyword1 = 'ibbon', keyword3 ='nput' , keyword2 = 'nput' ,keyword4= 'utput', savename = "CBsAnalyzer", passByCell = False):
     
     def printer(name, dict):
         nameList = dict.keys()
@@ -46,20 +111,27 @@ def CBsAnalyzer( saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon', key
                 newDict[name] = len(dict[name].keys())
         return newDict
 
-    
-    CB = Cells(CBsCells)
-    AIIs = Cells(AIIsCells)
+    CB = None
+    AIIs = None
+    if passByCell:
+        CB = copy.copy(CBsCells)
+        AIIs = copy.copy(AIIsCells)
+    else:
+        CB = Cells(CBsCells)
+        AIIs = Cells(AIIsCells)
     
     topCell = Cells(top)
     botCell = Cells(bot)
+    
+    
     
     coef = topCell.getCoefInfo().values()[0]
     
     CB.changeCoordinate(coef)
     AIIs.changeCoordinate(coef)
     
-    CB.normalizeX(botCell, topCell, False)
-    AIIs.normalizeX(botCell, topCell, False)
+    #CB.normalizeX(botCell, topCell, False)
+    #AIIs.normalizeX(botCell, topCell, False)
     
     comments = CB.commentWithKeywordExtractDict(keyword1)
     area = CB.toArea(False, keyword1)
@@ -79,7 +151,7 @@ def CBsAnalyzer( saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon', key
     inpDDLengDict = toLengthDict(inptoAIIdd, True)    
    
    
-    with open( saveLoc + "/CBsAnalysis.csv", 'wb') as csvfile:
+    with open( saveLoc + "/" + savename + ".csv", 'wb') as csvfile:
         
         fieldnames = ['name', 'median', 'AD', 'ribbon total', 'ribbons to AII', 'AIIs contacted', 'AII input', 'AIIs providing input', 'hull area']
         writer = csv.DictWriter(csvfile, fieldnames = fieldnames )
@@ -116,8 +188,8 @@ def connectionAnalyzer(saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon
     CB.changeCoordinate(coef)
     AIIs.changeCoordinate(coef)
     
-    CB.normalizeX(botCell, topCell, False)
-    AIIs.normalizeX(botCell, topCell, False)
+    #CB.normalizeX(botCell, topCell, False)
+    #AIIs.normalizeX(botCell, topCell, False) 
         
     ribtoAIIdd = CB.findClosePointsDict(AIIs, 500, False, keyword1, False, keyword2)
     inptoAIIdd = CB.findClosePointsDict(AIIs, 500, False, keyword3, False, keyword4)
@@ -149,8 +221,8 @@ def synapseAnalyzer(saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon', 
     CB.changeCoordinate(coef)
     AIIs.changeCoordinate(coef)
     
-    CB.normalizeX(botCell, topCell, False)
-    AIIs.normalizeX(botCell, topCell, False)
+    #CB.normalizeX(botCell, topCell, False)
+    #AIIs.normalizeX(botCell, topCell, False)
         
     ribtoAIIdd = CB.findClosePointsDict(AIIs, 500, False, keyword1, False, keyword2)
     inptoAIIdd = CB.findClosePointsDict(AIIs, 500, False, keyword3, False, keyword4)
@@ -174,5 +246,51 @@ def synapseAnalyzer(saveLoc, top, bot,CBsCells, AIIsCells , keyword1 = 'ibbon', 
                     writer.writerow({'CBname': name1, 'AIIname': name2, 'CBtoAII': 'N', 'AIItoCB' : 'Y', 'x': node[2] ,'y': node[1], 'z': node[0]})
         
         
+def CBsAnalyzer2( saveLoc, top, bot,CBsCells):
+    
+    def printer(name, dict):
+        nameList = dict.keys()
+        if not name in nameList:
+            return "N/A"
+        else:
+            return str(dict[name])
+    
+    def toLengthDict(dict, isitDD = False):
+        newDict = {}
+        for name in dict.keys():
+            newDict.setdefault(name)
+            
+            if not isitDD:
+                newDict[name] = len(dict[name])
+            else: 
+                newDict[name] = len(dict[name].keys())
+        return newDict
+
+    
+    CB = Cells(CBsCells)
+    
+    topCell = Cells(top)
+    botCell = Cells(bot)
+    
+    coef = topCell.getCoefInfo().values()[0]
+    
+    CB.changeCoordinate(coef)
+
+
+    CB.edgeOnlyNode()
+    median = CB.getMidPoint(True, False)
+    deviation = CB.getDeviation(False)
+
+   
+   
+    with open( saveLoc + "/CBsSkeletonDepth.csv", 'wb') as csvfile:
         
+        fieldnames = ['name', 'median', 'AD', ]
+        writer = csv.DictWriter(csvfile, fieldnames = fieldnames )
+        writer.writerow({'name': 'name', 'median' : 'median', 'AD' : 'AD'})
+        
+        for name in CB.Names:
+            writer.writerow({'name': name, 'median' : printer(name, median), 'AD' : printer(name, deviation) })
+        
+
     

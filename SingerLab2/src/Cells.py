@@ -5,6 +5,8 @@ Created on Aug 17, 2016
 '''
 from ImportList import *
 from ImportListForCell import *
+from _ast import Num
+from netbios import NCBENUM
 
 class Cells(object):
     """
@@ -142,6 +144,95 @@ class Cells(object):
                 node.append(thingCellName)
                 Nodes[thingCellName].append(node)      
         return Nodes      
+    
+    @staticmethod
+    def mergeCells(cellList1):
+        def getMin(nodeList, commentList ):
+            min = 100000000000
+            for node in nodeList:
+                if node[3] < min:
+                    min = node[3]
+            for node in commentList:
+                if node[3] < min:
+                    min = node[3]
+            return min
+
+        def getMax(nodeList, commentList):
+            max = 0
+            for node in nodeList:
+                if node[3] > max:
+                    max = node[3]
+
+            for node in commentList:
+                if node[3] > max:
+                    max = node[3]
+
+            return max
+
+        def nodeUpdate(incl, index ,nodeList ):
+            for node in nodeList:
+                node = node[index] + incl
+            return nodeList
+
+        cellList = copy.copy(cellList1)
+
+        newCell = Cells(None, None, [True, True, True, True] , True)
+
+        if len(cellList) == 0:
+            raise Exception('no cell is in the list')
+
+        newCell.scale = cellList[0].scale
+        newCell.Parameter = cellList[0].Parameter
+        newCell.NCBEboolean = [True, True, True, True]
+
+        # I need to take care of Nodes, Comments, Edges, Branches, Name
+
+        Nodes = {}
+        Comments = {}
+        Edges = {}
+        Branches = {}
+        Names = []
+
+        counter = 0
+
+        for cells in cellList:
+            for name in cells.Names:
+
+                Names.append(name)
+
+                cellNodes = cells.Nodes[name]
+                cellComments = cells.Comments[name]
+                cellBranches = cells.Branches[name]
+                cellEdges = cells.Edges[name]
+
+                max = getMax(cellNodes, cellComments)
+                min = getMin(cellNodes, cellComments)    
+
+                Nodes.setdefault(name)
+                Nodes[name] = nodeUpdate(counter, 3, cellNodes)
+
+                Comments.setdefault(name)
+                Comments[name] = nodeUpdate(counter, 3, cellComments)
+
+                Edges.setdefault(name)
+                Edges[name] = nodeUpdate(counter, 0, nodeUpdate(counter, 1, cellEdges))
+
+                Branches.setdefault(name)
+                Branches[name] = nodeUpdate(counter, 3, cellBranches)
+
+                newCell.Nodes = Nodes
+                newCell.Comments = Comments
+                newCell.Edges = Edges
+                newCell.Branches = Branches
+                newCell.Names = Names
+
+                counter = counter + (max - min ) + 2
+
+        return newCell
+            
+        
+    
+    
     """
     return min and max node number in a cell
     [min max]
@@ -158,7 +249,7 @@ class Cells(object):
             
             minmax.setdefault(thingCellName)
             minmax[thingCellName] = []
-            mini = 1000000000
+            mini = 10000000000
             maxi = 0
             for elem in child.iterfind('nodes/node'):
                 a = int(elem.get('id'))
@@ -249,7 +340,7 @@ class Cells(object):
             EdgeNode[key] = [item for item in indivCellNode if item[3] in indivEdge]
                        
 
-        return EdgeNode
+        return copy.copy(EdgeNode)
     """
     return edge in dictionary form
     { cell: [target source]}
@@ -271,14 +362,19 @@ class Cells(object):
                 
             Edges.setdefault(thingCellName)
             Edges[thingCellName] = []
+            
             for elem in child.iterfind('edges/edge'):
                 edge = []
+                
                 a=int(elem.get('target'))
                 b=int(elem.get('source'))
                 edge.append(a)
                 edge.append(b)
                 edge.append(thingCellName)
                 Edges[thingCellName].append(edge)
+                
+                    
+            
         return Edges
     """
     return list of names of cells
@@ -324,10 +420,16 @@ class Cells(object):
             indivCellNode = self.Nodes[key]
             indivEdge = self.Edges[key]
             indEdSource = set(x[1] for x in indivEdge)
+            indEdArr = set(x[0] for x in indivEdge)
+            indEdSource = indEdSource.union(indEdArr)
             EdgeNode[key] = [item for item in indivCellNode if item[3] in indEdSource]
        
-        return EdgeNode
-
+        return copy.copy(EdgeNode)
+    
+    def edgeOnlyNode(self):
+        self.Nodes = self.__edgeNodeExtract()
+        
+    
     """
     return edges in dictionary form
     { cell: [z y x id cellName]}
@@ -355,13 +457,19 @@ class Cells(object):
             allNodes = allNodes + nodes
         allNodes.sort(key = lambda x:x[sortIndex])
         return allNodes
+    def allEdgesExtract(self):
+        allEdges = []
+        for edges in self.Edges.values():
+            allEdges = allEdges + edges
+        return allEdges
+    
     """
     return edges in list form
     you have freedome to sort this however you want. 0 -z 1- y 2-x 
     {[z y x id cellName]}
      id is the source only! 
     """
-    def allEdgesExtract(self,sortIndex):
+    def allEdgeNodesExtract(self,sortIndex):
         EdgeNode = self.__edgeNodeExtract()      
         allEdges = []
         for edges in EdgeNode.values():
@@ -396,25 +504,47 @@ class Cells(object):
         newComments = []
         for comment in Comments:
             for keyword in args:
-                if comment[5].find(keyword) != -1:
+                if comment[5].lower().find(keyword.lower()) != -1:
                     newComments.append(comment)
                     break
         return newComments
     def commentWithKeywordExtractDict(self, key1):
+        if key1 == None:
+            return self.Comments
         newComment = {}
+        
+        
+        
         for item1 in self.Comments.keys():
             newComment.setdefault(item1)
             newComment[item1] = []
-            
-            
-        for item2 in self.Comments.keys():
-            
-            for comment in self.Comments[item2]:
+        
+        if isinstance(key1, str):
+            for item2 in self.Comments.keys():
                 
-                #print comment[5]
-                if comment[5].find(key1) != -1:
-                    newComment[item2].append(comment)
+                for comment in self.Comments[item2]:
                     
+                    #print comment[5]
+                    if comment[5].lower().find(key1.lower()) != -1:
+                        newComment[item2].append(comment)
+                        
+                        
+        elif isinstance(key1, list) and (len(key1) == 0):
+            return self.Comments
+        
+        
+        elif isinstance(key1, list) and (len(key1) != 0) and isinstance(key1[0],str) :
+            for item2 in self.Comments.keys():
+                for comment in self.Comments[item2]:
+                    #print comment[5]
+                    for akey in key1:
+                        if comment[5].lower().find(akey.lower()) != -1:
+                            newComment[item2].append(comment)
+                            break
+                        
+        else:
+            raise "key1 is either a single string or a list of strings"
+        
         newNewComment = {}
         
         for item3 in newComment.keys():
@@ -479,13 +609,89 @@ class Cells(object):
         
         
         Names = self.Names
+        
+        newCell = copy.copy(self)
+        newCell.reorderNodeID2(None)
+        
         for Name in Names:
-            separtor(self, saveDir + "/" + Name)    
+            separtor(newCell, Name, saveDir)    
         
-    def toVTK(self):
-        print "todo"
+    def toVTK(self, fileLoc, commentonlyToo = True, keyForComment = None, Commentcolor = "0.500000", skeletonColor = "0.000000"):
         
-    def toManyCells(self, NCBEboolean):
+        newCell = copy.copy(self)
+        newCell.reorderNodeID(keyForComment)
+        
+        
+        head1 = "# vtk DataFile Version 3.0\n"
+        head2 = "vtk output\n"
+        head3 = "ASCII\n"
+        head4 = "DATASET POLYDATA\n\n"
+        head = head1 + head2 + head3 + head4
+        for name in newCell.Names:
+            
+            if not name in newCell.Nodes.keys():
+                print(name + " is not in Nodes'name list" )
+                continue
+            
+            nodes = newCell.Nodes[name]
+            self.Comments[name].sort(key = lambda comment: comment[4])
+            self.Edges[name].sort(key = lambda edge:edge[1] )
+            
+            
+            comments = newCell.Comments[name]
+            edges = newCell.Edges[name]
+            
+            
+            with open(fileLoc + "/" + name + ".vtk", 'w') as f:
+                f.write(head)
+                f.write("POINTS " + str(len(nodes)) + " float\n")
+                
+                for node in nodes:
+                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
+                
+                f.write("\nLINES " + str(len(edges)) + " " + str( 3* len(edges)) + "\n")
+                for edge in edges:
+                    f.write("2 " + str(edge[1]) +" " + str(edge[0]) + "\n")
+                    
+                f.write("\nVERTICES "+ str(len(nodes)) + " " + str(len(nodes) * 2) + "\n")
+                
+                for node in nodes:
+                    f.write("1 " + str(node[3]) + "\n")
+                
+                f.write("\nPOINT_DATA " + str(len(nodes)) + "\n") 
+                f.write("SCALARS scalars float 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for node in nodes:
+                    f.write(skeletonColor + "\n")
+                
+            if not commentonlyToo:
+                continue
+            
+            varname = ""
+            if keyForComment != None:
+                varname = str(keyForComment)
+            
+            with open(fileLoc + "/" + name +"_"+ varname +"_comments.vtk", 'w') as f:
+                f.write(head)
+                f.write("POINTS " + str(len(comments)) + " float\n")
+                
+                for node in comments:
+                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
+                
+                f.write("\nVERTICES "+ str(len(comments)) + " " + str(len(comments) * 2) + "\n")
+                count = 0
+                for comment in comments:
+                    f.write("1 " + str(count) + "\n")
+                    count = count + 1
+                
+                f.write("\nPOINT_DATA " + str(len(comments)) + "\n") 
+                f.write("SCALARS scalars float 1\n")
+                f.write("LOOKUP_TABLE default\n")
+                for comment in comments:
+                    f.write(Commentcolor+"\n")
+         
+        
+    def toManyCells(self, NCBEboolean = [True, True, True, True]):
         cellDict = {}
         for name in self.Names:
             cellDict.setdefault(name)
@@ -524,6 +730,53 @@ class Cells(object):
             
             cellDict[name] = temp
         return cellDict
+    
+    def toCellsWithSpecificNames(self, comment = None):
+        if comment == None:
+            return self
+    
+        cell = Cells(None, None, [True, True, True, True], True)
+        nodeDict = {}
+        edgeDict = {}
+        commentDict = {}
+        branchDict = {}
+        nameList = []
+ 
+        for name in self.Names:
+            skip = True
+            for sname in comment:
+                s2 = sname.lower()
+                s1 = name.lower()
+                if s1 == s2:
+                    skip = False
+            if skip:
+                continue
+                    
+            nodeDict.setdefault(name)
+            nodeDict[name] = self.Nodes[name]
+            
+            edgeDict.setdefault(name)
+            edgeDict[name] = self.Edges[name]
+            
+            commentDict.setdefault(name)
+            commentDict[name] = self.Comments[name]
+      
+            branchDict.setdefault(name)
+            branchDict[name] = self.Branches[name]
+                
+            nameList.append(name)
+       
+        cell.Nodes = nodeDict
+        cell.Edges = edgeDict
+        cell.Comments = commentDict
+        cell.Branches = branchDict
+        cell.NCBEboolean = [True, True, True, True]
+        cell.Names = nameList  
+        cell.Parameter = self.Parameter
+        cell.scale = self.scale
+        
+        return cell
+    
     def addCells(self):
         print "todo"
     def extractCells(self, cellnames):
@@ -558,6 +811,8 @@ class Cells(object):
         hullDict = self.toConvexHull(Nodes, keyword)
         polyDict = {}
         for name in NodeDict.keys():
+            if hullDict[name] == None:
+                continue
             polyDict.setdefault(name)
             polyDict[name] = Polygon(vertexToPoly(hullDict[name], yzExtract(NodeDict[name])))
         
@@ -591,19 +846,21 @@ class Cells(object):
             nodeList = NodeDict[name]
             
             if len(nodeList) < 3:
-                raise name + " list have less than 3 nodes; not enough for convex hull. "
-            
-            yzList = yzExtract(nodeList)
-            
-            hullDict.setdefault(name)
-            hullDict[name] = ConvexHull(yzList)
-            
-            if printCSV:
-                vertice = vertexToPoly(hullDict[name], yzList)
-                if keyword == None:
-                    keyword = ''
+                #raise Exception( name + " list have less than 3 nodes; not enough for convex hull. ")
+                print name + " has less than 3 nodes"
+                hullDict[name] = None
+            else:
+                yzList = yzExtract(nodeList)
                 
-                printVertice(saveLocation + "/" + name  + "_"+keyword, vertice)
+                hullDict.setdefault(name)
+                hullDict[name] = ConvexHull(yzList)
+                
+                if printCSV:
+                    vertice = vertexToPoly(hullDict[name], yzList)
+                    if keyword == None:
+                        keyword = ''
+                    
+                    printVertice(saveLocation + "/" + name  + "_"+str(keyword), vertice)
 
         return hullDict
         
@@ -617,9 +874,9 @@ class Cells(object):
                 commentList = convertCoord(coordinateCoefficient, commentList)
         if self.NCBEboolean[3]:    
             for branchList in self.Branches.values():
-                branchList = convertCoord(coordinateCoefficient, branchList)
+                branchList = convertCoord(coordinateCoefficient, branchList)    
     
-    def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne):
+    def normalizeX(self, botPlaneCell, topPlaneCell, zeroToOne, extraFactor = 1):
         
         if (not botPlaneCell.NCBEboolean[0]) or (not topPlaneCell.NCBEboolean[0]) :
             raise Exception("Bot cell or Top cell does not have nodes.")
@@ -635,7 +892,7 @@ class Cells(object):
                     node[2] = (topX - node[2])/( topX - botX)
                     
                     if not zeroToOne:
-                        node[2] = node[2] * -45 + 62.5
+                        node[2] = (node[2] * 45 + 27.5) * extraFactor
         
         
         if self.NCBEboolean[1]:
@@ -645,7 +902,7 @@ class Cells(object):
                     comment[2] = (topX - comment[2])/(topX - botX)
                     
                     if not zeroToOne:
-                        comment[2] = comment[2] * -45 + 62.5
+                        comment[2] = (comment[2] * 45 + 27.5) * extraFactor
                     
         if self.NCBEboolean[3]:
             for branchList in self.Branches.values():
@@ -653,12 +910,193 @@ class Cells(object):
                     branch[2] = (topX - branch[2])/(topX - botX)
                     
                     if not zeroToOne:
-                        branch[2] = branch[2] * -45 + 62.5        
+                        branch[2] = (branch[2] * 45 + 27.5) * extraFactor
     """
     get plane vector. 
     """
+    def reorderNodeID2(self, keys = None):    
+        
+        def findMapping(nodeList):
+            returnList = []
+            count = 0
+            
+            for node in nodeList:
+                newNode = []
+                newNode.append(node[3])
+                newNode.append(count)
+                returnList.append(newNode)
+                count = count + 1
+            
+            return returnList
+        
+        def changeIndex(mapings, nodeList, index):
+            newNodeList = []
+            
+            for map in mapings:
+                for node in nodeList:
+                    if map[0] == node[index]:
+                        newNode = copy.copy(node)
+                        newNode[index] = map[1]
+                        
+                        newNodeList.append(newNode)
+                    #else:
+                        #print "sad"
+            return newNodeList
+        newNodes = {}
+        newEdges = {}
+        newComments = {}
+        newBranches = {}
+        COMMENTS = self.commentWithKeywordExtractDict(keys)
+        print self.Comments
+        print COMMENTS
+        
+        for name in self.Names:
+            if not name in COMMENTS.keys():
+                
+                
+                print(name + " does not have any comments specified")
+                continue
+        
+        #for name in COMMENTS.keys():
+            self.Nodes[name].sort(key = lambda node:node[2])
+            
+            
+            Nodes = self.Nodes[name]
+            Edges = self.Edges[name]
+            Comments = COMMENTS[name]
+            Branches = self.Branches[name]        
+            
+            
+            #nodeID = set([item[3] for item in Nodes])
+            
+            #print nodeID
+            
+            #commentID = set(item[3] for item in Comments) # problem here . Let me think. 
+            #nodeID.difference_update(commentID)
+            #print commentID
+            #print nodeID
+            
+            #Nodes = [item for item in Nodes if item[3] in nodeID]
+
+            maping1 = findMapping(Nodes)
+            #maping2 = findMapping(Comments)
+            
+            newNodes.setdefault(name)
+            newNodes[name] = changeIndex(maping1, Nodes, 3)
+            
+            newEdges.setdefault(name)
+            newEdges[name] = changeIndex(maping1, changeIndex(maping1, Edges, 1), 0)
+            
+            newComments.setdefault(name)
+            newComments[name] = changeIndex(maping1, Comments, 3)
+            
+            newBranches.setdefault(name)
+            newBranches[name] = changeIndex(maping1, Branches, 3)
+            
+            print name
+        
+            print len(Comments)
+            print len(newComments[name] )
+            
+            
+            print len(Edges)
+            print len(newEdges[name])
+            
+            
+        self.Nodes = newNodes
+        self.Edges = newEdges
+        self.Comments = newComments
+        self.Branches = newBranches
     
-    """###################FIX IT FIX IT#####################""" 
+    
+    def reorderNodeID(self, keys = None):    
+        
+        def findMapping(nodeList):
+            returnList = []
+            count = 0
+            
+            for node in nodeList:
+                newNode = []
+                newNode.append(node[3])
+                newNode.append(count)
+                returnList.append(newNode)
+                count = count + 1
+            
+            return returnList
+        
+        def changeIndex(mapings, nodeList, index):
+            newNodeList = []
+            
+            for map in mapings:
+                for node in nodeList:
+                    if map[0] == node[index]:
+                        newNode = copy.copy(node)
+                        newNode[index] = map[1]
+                        
+                        newNodeList.append(newNode)
+                    #else:
+                        #print "sad"
+            return newNodeList
+        newNodes = {}
+        newEdges = {}
+        newComments = {}
+        newBranches = {}
+        COMMENTS = self.commentWithKeywordExtractDict(keys)
+        print self.Comments
+        print COMMENTS
+        for name in self.Names:
+            if not name in COMMENTS.keys():
+                
+                
+                print(name + " does not have any comments specified")
+                continue
+        
+        #for name in COMMENTS.keys():
+            self.Nodes[name].sort(key = lambda node:node[2])
+            
+            
+            Nodes = self.Nodes[name]
+            Edges = self.Edges[name]
+            Comments = COMMENTS[name]
+            Branches = self.Branches[name]        
+            
+            
+            nodeID = set([item[3] for item in Nodes])
+            
+            print nodeID
+            
+            commentID = set(item[3] for item in Comments) # problem here . Let me think. 
+            nodeID.difference_update(commentID)
+            print commentID
+            print nodeID
+            
+            Nodes = [item for item in Nodes if item[3] in nodeID]
+
+            maping1 = findMapping(Nodes)
+            maping2 = findMapping(Comments)
+            
+            newNodes.setdefault(name)
+            newNodes[name] = changeIndex(maping1, Nodes, 3)
+            
+            newEdges.setdefault(name)
+            newEdges[name] = changeIndex(maping1, changeIndex(maping1, Edges, 1), 0)
+            
+            newComments.setdefault(name)
+            newComments[name] = changeIndex(maping2, Comments, 3)
+            
+            newBranches.setdefault(name)
+            newBranches[name] = changeIndex(maping1, Branches, 3)
+            
+            print name
+            print len(Edges)
+            print len(newEdges[name])
+            
+        self.Nodes = newNodes
+        self.Edges = newEdges
+        self.Comments = newComments
+        self.Branches = newBranches
+        
+            
     
     
     def getCoefInfo(self, Node = True, keyword = None):
@@ -740,8 +1178,16 @@ class Cells(object):
         return devDict
 
     def findClosePoints(self, otherCell, threshold = 500, useNodeForSelf = True, keywordForSelf = None, useNodeForOther = True, keywordForOther = None, toCell = False):
-        def compareNode(nodeA, nodeB):
+        def compareNodeCube(nodeA, nodeB):
             if (math.fabs((nodeA[0] - nodeB[0])) < threshold) and (math.fabs((nodeA[1] - nodeB[1])) < threshold) and (math.fabs((nodeA[2] - nodeB[2])) < threshold):
+                return True
+            else:
+                return False
+            
+        def compareNode(nodeA, nodeB):
+            dist = (nodeA[0] - nodeB[0])*(nodeA[0] - nodeB[0])+(nodeA[1] - nodeB[1])*(nodeA[1] - nodeB[1])+(nodeA[2] - nodeB[2])*(nodeA[2] - nodeB[2])
+            thsq = threshold * threshold
+            if dist < thsq:
                 return True
             else:
                 return False
