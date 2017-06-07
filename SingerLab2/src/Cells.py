@@ -614,11 +614,7 @@ class Cells(object):
         newCell.reorderNodeID2(None)
         
         for Name in Names:
-<<<<<<< HEAD
             separtor(newCell, Name, saveDir)    
-=======
-            separtor(self, Name, saveDir)    
->>>>>>> origin/master
         
     def toVTK(self, fileLoc, commentonlyToo = True, keyForComment = None, Commentcolor = "0.500000", skeletonColor = "0.000000"):
         
@@ -632,19 +628,15 @@ class Cells(object):
         head4 = "DATASET POLYDATA\n\n"
         head = head1 + head2 + head3 + head4
         for name in newCell.Names:
-<<<<<<< HEAD
             
             if not name in newCell.Nodes.keys():
                 print(name + " is not in Nodes'name list" )
                 continue
             
-=======
->>>>>>> origin/master
             nodes = newCell.Nodes[name]
             self.Comments[name].sort(key = lambda comment: comment[4])
             self.Edges[name].sort(key = lambda edge:edge[1] )
             
-<<<<<<< HEAD
             
             comments = newCell.Comments[name]
             edges = newCell.Edges[name]
@@ -699,61 +691,6 @@ class Cells(object):
                     f.write(Commentcolor+"\n")
          
         
-=======
-            comments = newCell.Comments[name]
-            edges = newCell.Edges[name]
-            
-        
-            with open(fileLoc + "/" + name + ".vtk", 'w') as f:
-                f.write(head)
-                f.write("POINTS " + str(len(nodes)) + " float\n")
-                
-                for node in nodes:
-                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
-                
-                f.write("\nLINES " + str(len(edges)) + " " + str( 3* len(edges)) + "\n")
-                for edge in edges:
-                    f.write("2 " + str(edge[1]) +" " + str(edge[0]) + "\n")
-                    
-                f.write("\nVERTICES "+ str(len(nodes)) + " " + str(len(nodes) * 2) + "\n")
-                
-                for node in nodes:
-                    f.write("1 " + str(node[3]) + "\n")
-                
-                f.write("\nPOINT_DATA " + str(len(nodes)) + "\n") 
-                f.write("SCALARS scalars float 1\n")
-                f.write("LOOKUP_TABLE default\n")
-                for node in nodes:
-                    f.write(skeletonColor + "\n")
-                
-            if not commentonlyToo:
-                continue
-            
-            varname = ""
-            if keyForComment != None:
-                varname = str(keyForComment)
-            
-            with open(fileLoc + "/" + name +"_"+ varname +"_comments.vtk", 'w') as f:
-                f.write(head)
-                f.write("POINTS " + str(len(comments)) + " float\n")
-                
-                for node in comments:
-                    f.write(str(node[2])+ " " + str(node[1])+ " " + str(node[0]) + "\n")
-                
-                f.write("\nVERTICES "+ str(len(comments)) + " " + str(len(comments) * 2) + "\n")
-                count = 0
-                for comment in comments:
-                    f.write("1 " + str(count) + "\n")
-                    count = count + 1
-                
-                f.write("\nPOINT_DATA " + str(len(comments)) + "\n") 
-                f.write("SCALARS scalars float 1\n")
-                f.write("LOOKUP_TABLE default\n")
-                for comment in comments:
-                    f.write(Commentcolor+"\n")
-         
-        
->>>>>>> origin/master
     def toManyCells(self, NCBEboolean = [True, True, True, True]):
         cellDict = {}
         for name in self.Names:
@@ -914,17 +851,10 @@ class Cells(object):
                 hullDict[name] = None
             else:
                 yzList = yzExtract(nodeList)
-<<<<<<< HEAD
                 
                 hullDict.setdefault(name)
                 hullDict[name] = ConvexHull(yzList)
                 
-=======
-                
-                hullDict.setdefault(name)
-                hullDict[name] = ConvexHull(yzList)
-                
->>>>>>> origin/master
                 if printCSV:
                     vertice = vertexToPoly(hullDict[name], yzList)
                     if keyword == None:
@@ -984,11 +914,7 @@ class Cells(object):
     """
     get plane vector. 
     """
-<<<<<<< HEAD
-    def reorderNodeID2(self, keys = None):    
-=======
-    def reorderNodeID(self, keys = None):    
->>>>>>> origin/master
+        def reorderNodeID2(self, keys = None):    
         
         def findMapping(nodeList):
             returnList = []
@@ -1013,22 +939,16 @@ class Cells(object):
                         newNode[index] = map[1]
                         
                         newNodeList.append(newNode)
-<<<<<<< HEAD
                     #else:
                         #print "sad"
-=======
-            
->>>>>>> origin/master
             return newNodeList
         newNodes = {}
         newEdges = {}
         newComments = {}
         newBranches = {}
         COMMENTS = self.commentWithKeywordExtractDict(keys)
-<<<<<<< HEAD
         print self.Comments
         print COMMENTS
-        
         for name in self.Names:
             if not name in COMMENTS.keys():
                 
@@ -1050,7 +970,7 @@ class Cells(object):
             
             #print nodeID
             
-            #commentID = set(item[3] for item in Comments) # problem here . Let me think. 
+            #commentID = set(item[3] for item in Comments)
             #nodeID.difference_update(commentID)
             #print commentID
             #print nodeID
@@ -1073,21 +993,17 @@ class Cells(object):
             newBranches[name] = changeIndex(maping1, Branches, 3)
             
             print name
-        
-            print len(Comments)
-            print len(newComments[name] )
-            
-            
             print len(Edges)
             print len(newEdges[name])
-            
             
         self.Nodes = newNodes
         self.Edges = newEdges
         self.Comments = newComments
         self.Branches = newBranches
-    
-    
+
+
+
+
     def reorderNodeID(self, keys = None):    
         
         def findMapping(nodeList):
@@ -1131,12 +1047,6 @@ class Cells(object):
                 continue
         
         #for name in COMMENTS.keys():
-=======
-        
-        
-        for name in self.Names:
-        
->>>>>>> origin/master
             self.Nodes[name].sort(key = lambda node:node[2])
             
             
@@ -1147,24 +1057,18 @@ class Cells(object):
             
             
             nodeID = set([item[3] for item in Nodes])
-<<<<<<< HEAD
             
             print nodeID
             
-            commentID = set(item[3] for item in Comments) # problem here . Let me think. 
+            commentID = set(item[3] for item in Comments)
             nodeID.difference_update(commentID)
             print commentID
             print nodeID
             
-=======
-            commentID = set(item[3] for item in Comments)
-            nodeID.difference_update(commentID)
->>>>>>> origin/master
             Nodes = [item for item in Nodes if item[3] in nodeID]
 
             maping1 = findMapping(Nodes)
             maping2 = findMapping(Comments)
-<<<<<<< HEAD
             
             newNodes.setdefault(name)
             newNodes[name] = changeIndex(maping1, Nodes, 3)
@@ -1175,14 +1079,6 @@ class Cells(object):
             newComments.setdefault(name)
             newComments[name] = changeIndex(maping2, Comments, 3)
             
-=======
-            newNodes.setdefault(name)
-            newNodes[name] = changeIndex(maping1, Nodes, 3)
-            newEdges.setdefault(name)
-            newEdges[name] = changeIndex(maping1, changeIndex(maping1, Edges, 1), 0)
-            newComments.setdefault(name)
-            newComments[name] = changeIndex(maping2, Comments, 3)
->>>>>>> origin/master
             newBranches.setdefault(name)
             newBranches[name] = changeIndex(maping1, Branches, 3)
             
