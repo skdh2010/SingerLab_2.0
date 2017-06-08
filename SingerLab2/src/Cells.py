@@ -914,7 +914,7 @@ class Cells(object):
     """
     get plane vector. 
     """
-        def reorderNodeID2(self, keys = None):    
+    def reorderNodeID2(self, keys = None):    
         
         def findMapping(nodeList):
             returnList = []
