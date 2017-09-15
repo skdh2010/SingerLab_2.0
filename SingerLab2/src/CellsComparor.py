@@ -276,6 +276,9 @@ def CBsAnalyzer2( saveLoc, top, bot,CBsCells):
     
     CB.changeCoordinate(coef)
 
+    topCell.changeCoordinate(coef)
+    botCell.changeCoordinate(coef)
+
 
     CB.edgeOnlyNode()
     median = CB.getMidPoint(True, False)
@@ -293,4 +296,95 @@ def CBsAnalyzer2( saveLoc, top, bot,CBsCells):
             writer.writerow({'name': name, 'median' : printer(name, median), 'AD' : printer(name, deviation) })
         
 
+    print "topcell's location"
+    print topCell.getCoefInfo()
+    print "botcell's location"
+    print botCell.getCoefInfo()
+
+
+""" separate project  """
+
+
+def commentLister1(saveLoc,top, bot, NOSsCells):
     
+    NOSs = Cells(NOSsCells)
+    #AIIs = Cells(AIIsCells)
+
+    topCell = Cells(top)
+    botCell = Cells(bot)
+    
+    coef = topCell.getCoefInfo().values()[0]
+    
+    NOSs.changeCoordinate(coef)
+    #AIIs.changeCoordinate(coef)
+    #NOSs.normalizeX(botCell, topCell, False)
+    #AIIs.normalizeX(botCell, topCell, False)
+
+    
+    CBdict = NOSs.commentWithKeywordExtractDict("CB output")
+    RBdict = NOSs.commentWithKeywordExtractDict("RB output")
+    AIIdict = NOSs.commentWithKeywordExtractDict("AII output")
+       
+    ACdict = NOSs.commentWithKeywordExtractDict("AC input")
+    RBidict = NOSs.commentWithKeywordExtractDict("RB input")
+    CBidict = NOSs.commentWithKeywordExtractDict("CB input")
+
+    #CBdict.update(RBdict)
+    #CBdict.update(AIIdict)
+    #CBdict.update(ACdict)
+
+    CBdict = RBdict
+
+    with open( saveLoc + "/commentList.csv", 'wb') as csvfile:
+        
+        fieldnames = ['cellname', 'x', 'y', 'z', 'comment']
+        writer = csv.DictWriter(csvfile, fieldnames = fieldnames )
+        writer.writerow({'cellname': 'Cellname', 'x': 'x', 'y': 'y', 'z':'z','comment':'comment' }) 
+        for name1 in CBdict.keys():
+            for node1 in CBdict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+        for name1 in RBdict.keys():
+            for node1 in RBdict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+        for name1 in AIIdict.keys():
+            for node1 in AIIdict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+        for name1 in ACdict.keys():
+            for node1 in ACdict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+        for name1 in RBidict.keys():
+            for node1 in RBidict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+        for name1 in CBidict.keys():
+            for node1 in CBidict[name1]:
+                writer.writerow({'cellname': name1,  'x': node1[2] ,'y': node1[1], 'z': node1[0] , 'comment':node1[5] })
+
+
+    #print CBdict
+
+
+def synapseAnalyzer2(saveLoc,DeltasCells, CBsCells , keyword1 = 'ribbon input' , keyword2 = 'ribbon' ):
+    
+    CB = Cells(DeltasCells)
+    AIIs = Cells(CBsCells)
+    
+    
+    #CB.normalizeX(botCell, topCell, False)
+    #AIIs.normalizeX(botCell, topCell, False)
+        
+    ribtoAIIdd = CB.findClosePointsDict(AIIs, 500, False, keyword1, False, keyword2)
+  
+    with open( saveLoc + "/synapses2.csv", 'wb') as csvfile:
+        
+        fieldnames = ['DeltaName', 'CBname', 'x', 'y', 'z']
+        writer = csv.DictWriter(csvfile, fieldnames = fieldnames )
+        writer.writerow({'DeltaName': 'DeltaName', 'CBname': 'CBname', 'x': 'x', 'y': 'y', 'z':'z' }) 
+        for name1 in ribtoAIIdd.keys():
+            for name2 in ribtoAIIdd[name1].keys():
+                for node in ribtoAIIdd[name1][name2]:
+                    writer.writerow({'DeltaName': name1, 'CBname': name2, 'x': node[2] ,'y': node[1], 'z': node[0]})

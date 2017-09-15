@@ -640,9 +640,9 @@ class Cells(object):
             
             comments = newCell.Comments[name]
             edges = newCell.Edges[name]
-            
-            
-            with open(fileLoc + "/" + name + ".vtk", 'w') as f:
+
+
+            with open(fileLoc + "/" + name.replace("?","") + ".vtk", 'w') as f:
                 f.write(head)
                 f.write("POINTS " + str(len(nodes)) + " float\n")
                 
@@ -671,7 +671,7 @@ class Cells(object):
             if keyForComment != None:
                 varname = str(keyForComment)
             
-            with open(fileLoc + "/" + name +"_"+ varname +"_comments.vtk", 'w') as f:
+            with open(fileLoc + "/" + name.replace("?","") +"_"+ varname +"_comments.vtk", 'w') as f:
                 f.write(head)
                 f.write("POINTS " + str(len(comments)) + " float\n")
                 
@@ -1127,21 +1127,33 @@ class Cells(object):
             else:
                 nodeDict = self.commentWithKeywordExtractDict(keyword)
         
+
+
         for name in nodeDict.keys():
             nodeList = nodeDict[name]
             
             avgDict.setdefault(name)
             
-            if Average:
+            if len(nodeList) == 0:
                 if onlyX:
-                    avgDict[name] = getAvgPoint(nodeList)[2]
+                    avgDict[name] ="None"
                 else:
-                    avgDict[name] = getAvgPoint(nodeList)  
-            else:
-                if onlyX:
-                    avgDict[name] = getMedianPoint(nodeList)[2]
+                    avgDict[name]= ["None", "None", "None"] 
+
+
+            else: 
+                if Average:
+                    if onlyX:
+                    
+                        avgDict[name] = getAvgPoint(nodeList)[2]
+                    else:
+                        avgDict[name] = getAvgPoint(nodeList)  
                 else:
-                    avgDict[name] = getMedianPoint(nodeList)
+                    if onlyX:
+                    #print nodeList
+                        avgDict[name] = getMedianPoint(nodeList)[2]
+                    else:
+                        avgDict[name] = getMedianPoint(nodeList)
 
         return avgDict
     
@@ -1151,6 +1163,12 @@ class Cells(object):
             raise Exception("This cell does not have nodes.")
         devDict = {}
         nodeDict = {}
+
+        
+
+
+
+
         if Node:
             nodeDict = self.Nodes
         else:
@@ -1162,6 +1180,11 @@ class Cells(object):
         for name in nodeDict.keys():
             nodeList = nodeDict[name]
             
+            if len(nodeList) == 0:
+                
+                devDict[name] ="None"
+                continue 
+
             devDict.setdefault(name)
             if StandardDeviation:
 

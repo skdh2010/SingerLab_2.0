@@ -64,8 +64,6 @@ def getAvgPoint(aList):
 
 
 def getMedianPoint(aList):
-
-    
     xArray =  sorted(aList, key = lambda x:x[2])
     
     
